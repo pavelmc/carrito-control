@@ -18,9 +18,6 @@
  * 3 - LEFT
  * 4 - RIGHT
  *
- * ** Other buttons as analog ones ***
- * A4 - 10 buttons anlog muxed
- *
  * ** OPTION Buttons ***
  *
  *
@@ -64,8 +61,6 @@ struct RadioPacket {
     bool speed_hold = 0;
     int turn = 0;
     bool turn_hold = 0;
-    bool stop = 0;
-    bool lookAhead = 0;
     unsigned long options = 0;
 };
 
@@ -88,19 +83,6 @@ Bounce B_fwd = Bounce();
 Bounce B_rev = Bounce();
 Bounce B_left = Bounce();
 Bounce B_right = Bounce();
-
-#include <BMux.h>
-#define ANALOG_PIN A4
-#define BUTTONS_COUNT 10
-BMux abm;
-
-// Adding the buttons the the instance
-Button Bfront = Button(600, &lookAhead);
-Button Bstop = Button(540, &stopMotion);
-
-
-// Serial Debug
-#define SDEBUG      0
 
 /************************************************************************/
 
@@ -252,41 +234,31 @@ void checkLEFT() {
 bool txBufferChanged() {
     // speed
     if (_radioData.speed != 0) {
-        #ifdef SDEBUG
         Serial.println("!speed");
-        #endif
         return true;
     }
 
     // speed hold
     if (_radioData.speed_hold != 0) {
-        #ifdef SDEBUG
         Serial.println("!speed_hold");
-        #endif
         return true;
     }
 
     // turn
     if (_radioData.turn != 0) {
-        #ifdef SDEBUG
         Serial.println("!turn");
-        #endif
         return true;
     }
 
     // turn hold
     if (_radioData.turn_hold != 0) {
-        #ifdef SDEBUG
         Serial.println("!turn_hold");
-        #endif
         return true;
     }
 
     // options
     if (_radioData.options != 0) {
-        #ifdef SDEBUG
         Serial.println("!options");
-        #endif
         return true;
     }
 
@@ -300,14 +272,10 @@ void checkChanges() {
     if (txBufferChanged()) {
         // TX the data
         if (txCommand()) {
-            #ifdef SDEBUG
             Serial.println("GOT ACK ");
-            #endif
-        } else {
-            #ifdef SDEBUG
-            Serial.println("Fail !!!");
-            #endif
-        }
+        } // else {
+            //~ Serial.println("Fail !!!");
+        //~ }
     }
 }
 
@@ -315,71 +283,95 @@ void checkChanges() {
 // transmit
 bool txCommand() {
     // DEBUG
-    #ifdef SDEBUG
     Serial.print("TX DONE... ");
-    #endif
 
     // set serial
     _radioData.serial = millis();
+
+    Serial.println(_radioData.speed);
 
     // Note how '&' must be placed in front of the variable name.
     return _radio.send(DESTINATION_RADIO_ID, &_radioData, sizeof(_radioData));
 }
 
 
-// Move direction until weare facing forward
-void lookAhead() {
-    // serial debug
-    #ifdef SDEBUG
-    Serial.println("LookAhead");
-    #endif
+// serial
+#ifdef SERIAL_INPUT
+    void checkSerial() {
+        if (Serial.available()) {
+            // get it
+            int data = Serial.read();
 
-    // isntruct it to look ahead
-    _radioData.lookAhead = 1;
+            // check if data end
+            if (data <= 0) return;
 
-    // transmit it ride away
-    bool t = txCommand();
+            // check for key inputs
+            if (data == 56) {
+                // forward
+                _radioData.speed = SPEEDINC;
 
-    // check if acknowledge
-    if (t) { // success, it was received
-        // set it back to zero
-        _radioData.lookAhead = 0;
-        // transmit it ride away
-        bool t = txCommand();
+                // DEBUG
+                Serial.println("FWD");
+
+                // return
+                return;
+            }
+
+            // check for key inputs
+            if (data == 50) {
+                // rev
+                _radioData.speed = int(0) - SPEEDINC;
+
+                // DEBUG
+                Serial.println("REV");
+
+                // return
+                return;
+            }
+
+            // check for key inputs
+            if (data == 54) {
+                // right
+                _radioData.turn = TURNINC;
+
+                // DEBUG
+                Serial.println("RIGHT");
+
+                // return
+                return;
+            }
+
+            // check for key inputs
+            if (data == 52) {
+                // left
+                _radioData.turn =  int(0) - TURNINC;
+
+                // DEBUG
+                Serial.println("LEFT");
+
+                // return
+                return;
+            }
+        }
     }
-}
 
 
-// Stop all motion
-void stopMotion() {
-    // serial debug
-    #ifdef SDEBUG
-    Serial.println("Stop Motor");
-    #endif
-
-    // stop motion
-    _radioData.stop = 1;
-
-    // transmit it ride away
-    bool t = txCommand();
-
-    // check if acknowledge
-    if (t) { // success, it was received
-        // set it back to zero
-        _radioData.stop = 0;
-        // transmit it ride away
-        bool t = txCommand();
+    // reset serial data
+    void resetRadioData() {
+        _radioData.speed = 0;
+        _radioData.speed_hold = 0;
+        _radioData.turn = 0;
+        _radioData.turn_hold = 0;
+        _radioData.options = 0;
     }
-}
+#endif
 
 /************************************************************************/
 
 
 void setup () {
     // serial console
-    #ifdef SDEBUG
     Serial.begin(9600);
-    #endif
 
     // init the NRF radio
     /*****
@@ -400,16 +392,12 @@ void setup () {
      *             NRFLite::BITRATE2MBPS, 100)
      *******/
     if (!_radio.init(RADIO_ID, PIN_RADIO_CE, PIN_RADIO_CSN, NRFLite::BITRATE250KBPS, 52)) {
-        #ifdef SDEBUG
         Serial.println("Cannot communicate with radio");
-        #endif
         while (1); // Wait here forever.
     }
 
     // Radio initialized ok
-    #ifdef SDEBUG
     Serial.println("Radio init done.");
-    #endif
 
     // setup debounce instances for the buttons
     B_fwd.attach(FWD, INPUT_PULLUP);
@@ -422,11 +410,6 @@ void setup () {
     B_rev.interval(DEBOUNCE_INTERVAL);
     B_left.interval(DEBOUNCE_INTERVAL);
     B_right.interval(DEBOUNCE_INTERVAL);
-
-    // assign the function to the buttons
-    abm.init(ANALOG_PIN, 5, 20);
-    abm.add(Bfront);
-    abm.add(Bstop);
 }
 
 
@@ -434,7 +417,31 @@ void loop () {
     // Update the Bounce instances
     checkButtState();
 
+    #ifndef SERIAL_INPUT
+        // check for FWD action
+        checkFWD();
+
+        // check for FWD action
+        checkREV();
+
+        // check for FWD action
+        checkRIGHT();
+
+        // check for FWD action
+        checkLEFT();
+    #endif
+
+    // serial input
+    #ifdef SERIAL_INPUT
+        checkSerial();
+    #endif
+
     // check for changes
     checkChanges();
+
+    // reset serial
+    #ifdef SERIAL_INPUT
+        resetRadioData();
+    #endif
 
 }
