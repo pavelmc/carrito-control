@@ -67,29 +67,28 @@ struct RadioPacket {
 // instantiate
 NRFLite _radio;
 RadioPacket _radioData;
-//~ RadioPacket _old_radioData;
 
-// https://github.com/JChristensen/JC_Button
-#include <JC_Button.h>
+// https://github.com/thomasfredericks/Bounce2
+#include <Bounce2.h>
 
-#define FWD     2
-#define REV     5
-#define LEFT    3
-#define RIGHT   4
+#define FWD     5   // working
+#define REV     2   // working
+#define LEFT    3   // working
+#define RIGHT   4   // working
 
-#define HELD_TIME 250  // ms
-#define RELEASE_TIME 75  // ms
+#define DEBOUNCE_INTERVAL 25  // ms
+#define HELD_TIME 1000 // ms
 
-Button B_fwd(FWD);
-Button B_rev(REV);
-Button B_left(LEFT);
-Button B_right(RIGHT);
+Bounce B_fwd = Bounce();
+Bounce B_rev = Bounce();
+Bounce B_left = Bounce();
+Bounce B_right = Bounce();
 
 /************************************************************************/
 
 // constants
-#define SPEEDINC         (51)       // increments of the speed
-#define TURNINC          (6)       // increments of the turn angle
+#define SPEEDINC         (5)      // increments of the speed
+#define TURNINC          (6)      // increments of the turn angle
 
 // Variables
 int speed = 0;          // speed value to send
@@ -104,25 +103,27 @@ bool needTC = 0;        // flag to sign we need to TX
 
 // check for buttons state
 void checkButtState() {
-    B_fwd.read();
-    B_rev.read();
-    B_left.read();
-    B_right.read();
+    B_fwd.update();
+    B_rev.update();
+    B_left.update();
+    B_right.update();
 }
 
 
 // check FWD actions
 void checkFWD() {
     // check HELD
-    if (B_fwd.pressedFor(HELD_TIME)) {
+    if (B_fwd.held() > HELD_TIME) {
         // no acceleration
         _radioData.speed = 0;
         // but we are held
         _radioData.speed_hold = 1;
+        // reset held count
+        B_fwd.durationOfPreviousState = 0;
     }
 
     // check click
-    if (B_fwd.wasReleased()) {
+    if (B_fwd.fell()) {
         // just a click
         _radioData.speed = SPEEDINC;
         // in any case we sign for a held off
@@ -130,7 +131,7 @@ void checkFWD() {
     }
 
     // button was released for more than some time
-    if (B_fwd.releasedFor(RELEASE_TIME)) {
+    if (B_fwd.rose()) {
         // no action
         _radioData.speed = 0;
         // in any case we sign for a held off
@@ -142,23 +143,25 @@ void checkFWD() {
 // check REV actions
 void checkREV() {
     // check HELD
-    if (B_rev.pressedFor(HELD_TIME)) {
+    if (B_rev.held()) {
         // no acceleration
         _radioData.speed = 0;
         // but we are held
         _radioData.speed_hold = 1;
+        // reset held count
+        B_rev.durationOfPreviousState = 0;
     }
 
     // check click
-    if (B_rev.wasReleased()) {
+    if (B_rev.fell()) {
         // just a click
-        _radioData.speed = SPEEDINC * -1;
+        _radioData.speed = int(0) - SPEEDINC;
         // in any case we sign for a held off
         _radioData.speed_hold = 0;
     }
 
     // button was released for more than some time
-    if (B_rev.releasedFor(RELEASE_TIME)) {
+    if (B_rev.rose()) {
         // no action
         _radioData.speed = 0;
         // in any case we sign for a held off
@@ -170,15 +173,17 @@ void checkREV() {
 // check RIGHT actions
 void checkRIGHT() {
     // check HELD
-    if (B_right.pressedFor(HELD_TIME)) {
+    if (B_right.held() > HELD_TIME) {
         // no acceleration
         _radioData.turn = 0;
         // but we are held
         _radioData.turn_hold = 1;
+        // reset held count
+        B_right.durationOfPreviousState = 0;
     }
 
     // check click
-    if (B_right.wasReleased()) {
+    if (B_right.fell()) {
         // just a click
         _radioData.turn = TURNINC;
         // in any case we sign for a held off
@@ -186,7 +191,7 @@ void checkRIGHT() {
     }
 
     // button was released for more than some time
-    if (B_right.releasedFor(RELEASE_TIME)) {
+    if (B_right.rose()) {
         // no action
         _radioData.turn = 0;
         // in any case we sign for a held off
@@ -198,23 +203,25 @@ void checkRIGHT() {
 // check LEFT actions
 void checkLEFT() {
     // check HELD
-    if (B_left.pressedFor(HELD_TIME)) {
+    if (B_left.held() > HELD_TIME) {
         // no acceleration
         _radioData.turn = 0;
         // but we are held
         _radioData.turn_hold = 1;
+        // reset held count
+        B_left.durationOfPreviousState = 0;
     }
 
     // check click
-    if (B_left.wasReleased()) {
+    if (B_left.fell()) {
         // just a click
-        _radioData.turn = TURNINC * -1;
+        _radioData.turn = int(0) - TURNINC;
         // in any case we sign for a held off
         _radioData.turn_hold = 0;
     }
 
     // button was released for more than some time
-    if (B_left.releasedFor(RELEASE_TIME)) {
+    if (B_left.rose()) {
         // no action
         _radioData.turn = 0;
         // in any case we sign for a held off
@@ -266,9 +273,9 @@ void checkChanges() {
         // TX the data
         if (txCommand()) {
             Serial.println("GOT ACK ");
-        } else {
-            Serial.println("Fail !!!");
-        }
+        } // else {
+            //~ Serial.println("Fail !!!");
+        //~ }
     }
 }
 
@@ -280,6 +287,8 @@ bool txCommand() {
 
     // set serial
     _radioData.serial = millis();
+
+    Serial.println(_radioData.speed);
 
     // Note how '&' must be placed in front of the variable name.
     return _radio.send(DESTINATION_RADIO_ID, &_radioData, sizeof(_radioData));
@@ -311,7 +320,7 @@ bool txCommand() {
             // check for key inputs
             if (data == 50) {
                 // rev
-                _radioData.speed = SPEEDINC * -1;
+                _radioData.speed = int(0) - SPEEDINC;
 
                 // DEBUG
                 Serial.println("REV");
@@ -335,7 +344,7 @@ bool txCommand() {
             // check for key inputs
             if (data == 52) {
                 // left
-                _radioData.turn = TURNINC * -1;
+                _radioData.turn =  int(0) - TURNINC;
 
                 // DEBUG
                 Serial.println("LEFT");
@@ -391,10 +400,16 @@ void setup () {
     Serial.println("Radio init done.");
 
     // setup debounce instances for the buttons
-    B_fwd.begin();
-    B_rev.begin();
-    B_left.begin();
-    B_right.begin();
+    B_fwd.attach(FWD, INPUT_PULLUP);
+    B_rev.attach(REV, INPUT_PULLUP);
+    B_left.attach(LEFT, INPUT_PULLUP);
+    B_right.attach(RIGHT, INPUT_PULLUP);
+
+    // set debounce intervals
+    B_fwd.interval(DEBOUNCE_INTERVAL);
+    B_rev.interval(DEBOUNCE_INTERVAL);
+    B_left.interval(DEBOUNCE_INTERVAL);
+    B_right.interval(DEBOUNCE_INTERVAL);
 }
 
 
