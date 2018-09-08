@@ -95,18 +95,21 @@ int speed = 0;          // speed value to send
 int turn = 0;           // turn value to send
 bool needTC = 0;        // flag to sign we need to TX
 
-
-//~ #define SERIAL_INPUT true
-
-
 /************************************************************************/
 
 // check for buttons state
 void checkButtState() {
+    // update button state
     B_fwd.update();
     B_rev.update();
     B_left.update();
     B_right.update();
+
+    // detect button change
+    checkFWD();
+    checkREV();
+    checkLEFT();
+    checkRIGHT();
 }
 
 
@@ -273,9 +276,9 @@ void checkChanges() {
         // TX the data
         if (txCommand()) {
             Serial.println("GOT ACK ");
-        } // else {
-            //~ Serial.println("Fail !!!");
-        //~ }
+        } else {
+            Serial.println("Fail !!!");
+        }
     }
 }
 
@@ -294,77 +297,6 @@ bool txCommand() {
     return _radio.send(DESTINATION_RADIO_ID, &_radioData, sizeof(_radioData));
 }
 
-
-// serial
-#ifdef SERIAL_INPUT
-    void checkSerial() {
-        if (Serial.available()) {
-            // get it
-            int data = Serial.read();
-
-            // check if data end
-            if (data <= 0) return;
-
-            // check for key inputs
-            if (data == 56) {
-                // forward
-                _radioData.speed = SPEEDINC;
-
-                // DEBUG
-                Serial.println("FWD");
-
-                // return
-                return;
-            }
-
-            // check for key inputs
-            if (data == 50) {
-                // rev
-                _radioData.speed = int(0) - SPEEDINC;
-
-                // DEBUG
-                Serial.println("REV");
-
-                // return
-                return;
-            }
-
-            // check for key inputs
-            if (data == 54) {
-                // right
-                _radioData.turn = TURNINC;
-
-                // DEBUG
-                Serial.println("RIGHT");
-
-                // return
-                return;
-            }
-
-            // check for key inputs
-            if (data == 52) {
-                // left
-                _radioData.turn =  int(0) - TURNINC;
-
-                // DEBUG
-                Serial.println("LEFT");
-
-                // return
-                return;
-            }
-        }
-    }
-
-
-    // reset serial data
-    void resetRadioData() {
-        _radioData.speed = 0;
-        _radioData.speed_hold = 0;
-        _radioData.turn = 0;
-        _radioData.turn_hold = 0;
-        _radioData.options = 0;
-    }
-#endif
 
 /************************************************************************/
 
@@ -417,31 +349,6 @@ void loop () {
     // Update the Bounce instances
     checkButtState();
 
-    #ifndef SERIAL_INPUT
-        // check for FWD action
-        checkFWD();
-
-        // check for FWD action
-        checkREV();
-
-        // check for FWD action
-        checkRIGHT();
-
-        // check for FWD action
-        checkLEFT();
-    #endif
-
-    // serial input
-    #ifdef SERIAL_INPUT
-        checkSerial();
-    #endif
-
     // check for changes
     checkChanges();
-
-    // reset serial
-    #ifdef SERIAL_INPUT
-        resetRadioData();
-    #endif
-
 }
