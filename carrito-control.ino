@@ -95,6 +95,10 @@ int speed = 0;          // speed value to send
 int turn = 0;           // turn value to send
 bool needTC = 0;        // flag to sign we need to TX
 
+// Debug used to disable the serial messages
+#define DSERIAL
+
+
 /************************************************************************/
 
 // check for buttons state
@@ -237,31 +241,41 @@ void checkLEFT() {
 bool txBufferChanged() {
     // speed
     if (_radioData.speed != 0) {
+        #ifdef DSERIAL
         Serial.println("!speed");
+        #endif
         return true;
     }
 
     // speed hold
     if (_radioData.speed_hold != 0) {
+        #ifdef DSERIAL
         Serial.println("!speed_hold");
+        #endif
         return true;
     }
 
     // turn
     if (_radioData.turn != 0) {
+        #ifdef DSERIAL
         Serial.println("!turn");
+        #endif
         return true;
     }
 
     // turn hold
     if (_radioData.turn_hold != 0) {
+        #ifdef DSERIAL
         Serial.println("!turn_hold");
+        #endif
         return true;
     }
 
     // options
     if (_radioData.options != 0) {
+        #ifdef DSERIAL
         Serial.println("!options");
+        #endif
         return true;
     }
 
@@ -275,9 +289,13 @@ void checkChanges() {
     if (txBufferChanged()) {
         // TX the data
         if (txCommand()) {
+            #ifdef DSERIAL
             Serial.println("GOT ACK ");
+            #endif
         } else {
+            #ifdef DSERIAL
             Serial.println("Fail !!!");
+            #endif
         }
     }
 }
@@ -286,12 +304,12 @@ void checkChanges() {
 // transmit
 bool txCommand() {
     // DEBUG
+    #ifdef DSERIAL
     Serial.print("TX DONE... ");
+    #endif
 
     // set serial
     _radioData.serial = millis();
-
-    Serial.println(_radioData.speed);
 
     // Note how '&' must be placed in front of the variable name.
     return _radio.send(DESTINATION_RADIO_ID, &_radioData, sizeof(_radioData));
@@ -303,7 +321,9 @@ bool txCommand() {
 
 void setup () {
     // serial console
+    #ifdef DSERIAL
     Serial.begin(9600);
+    #endif
 
     // init the NRF radio
     /*****
@@ -324,12 +344,16 @@ void setup () {
      *             NRFLite::BITRATE2MBPS, 100)
      *******/
     if (!_radio.init(RADIO_ID, PIN_RADIO_CE, PIN_RADIO_CSN, NRFLite::BITRATE250KBPS, 52)) {
+        #ifdef DSERIAL
         Serial.println("Cannot communicate with radio");
+        #endif
         while (1); // Wait here forever.
     }
 
     // Radio initialized ok
+    #ifdef DSERIAL
     Serial.println("Radio init done.");
+    #endif
 
     // setup debounce instances for the buttons
     B_fwd.attach(FWD, INPUT_PULLUP);
