@@ -61,6 +61,8 @@ struct RadioPacket {
     bool speed_hold = 0;
     int turn = 0;
     bool turn_hold = 0;
+    bool stop = 0;
+    bool lookAhead = 0;
     unsigned long options = 0;
 };
 
@@ -84,6 +86,17 @@ Bounce B_rev = Bounce();
 Bounce B_left = Bounce();
 Bounce B_right = Bounce();
 
+// analog buttons
+#include <BMux.h>
+#define ANALOG_PIN A4
+#define BUTTONS_COUNT 2
+BMux abm;
+
+// load buttons functions and details
+Button BlookAhead = Button(500, &sendLA);
+Button Bstop = Button(20, &sendStop);
+
+
 /************************************************************************/
 
 // constants
@@ -95,11 +108,51 @@ int speed = 0;          // speed value to send
 int turn = 0;           // turn value to send
 bool needTC = 0;        // flag to sign we need to TX
 
-// Debug used to disable the serial messages
+// Debug used to enable/disable the serial messages
 #define DSERIAL
 
 
 /************************************************************************/
+
+// send the stop command to the carrito
+void sendStop() {
+    // debug
+    #ifdef DSERIAL
+    Serial.println("Stop");
+    #endif
+
+    // set values
+    _radioData.stop = 1;
+
+    // send data
+    bool t = txCommand();
+    if (t) {
+        // reset the value and send it
+        _radioData.stop = 0;
+        bool t = txCommand();
+    }
+}
+
+
+// send the look ahead command to the carrito
+void sendLA() {
+    // debug
+    #ifdef DSERIAL
+    Serial.println("Look Ahead");
+    #endif
+
+    // set values
+    _radioData.lookAhead = 1;
+
+    // send data
+    bool t = txCommand();
+    if (t) {
+        // reset the value and send it
+        _radioData.lookAhead = 0;
+        bool t = txCommand();
+    }
+}
+
 
 // check for buttons state
 void checkButtState() {
@@ -366,6 +419,11 @@ void setup () {
     B_rev.interval(DEBOUNCE_INTERVAL);
     B_left.interval(DEBOUNCE_INTERVAL);
     B_right.interval(DEBOUNCE_INTERVAL);
+
+    // setup the buttons
+    abm.init(ANALOG_PIN, 5, 30);
+    abm.add(Bstop);
+    abm.add(BlookAhead);
 }
 
 
@@ -375,4 +433,9 @@ void loop () {
 
     // check for changes
     checkChanges();
+
+    // check for analog buttons
+    abm.check();
+
+    //~ Serial.println(analogRead(ANALOG_PIN));
 }
