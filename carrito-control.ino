@@ -101,7 +101,7 @@ Button Bstop = Button(20, &sendStop);
 
 // constants
 #define SPEEDINC         (5)      // increments of the speed
-#define TURNINC          (6)      // increments of the turn angle
+#define TURNINC          (3)      // increments of the turn angle
 
 // Variables
 int speed = 0;          // speed value to send
@@ -173,14 +173,14 @@ void checkButtState() {
 // check FWD actions
 void checkFWD() {
     // check HELD
-    if (B_fwd.held() > HELD_TIME) {
-        // no acceleration
-        _radioData.speed = 0;
-        // but we are held
-        _radioData.speed_hold = 1;
-        // reset held count
-        B_fwd.durationOfPreviousState = 0;
-    }
+    //~ if (B_fwd.held() > HELD_TIME) {
+        //~ // no acceleration
+        //~ _radioData.speed = 0;
+        //~ // but we are held
+        //~ _radioData.speed_hold = 1;
+        //~ // reset held count
+        //~ B_fwd.durationOfPreviousState = 0;
+    //~ }
 
     // check click
     if (B_fwd.fell()) {
@@ -203,14 +203,14 @@ void checkFWD() {
 // check REV actions
 void checkREV() {
     // check HELD
-    if (B_rev.held()) {
-        // no acceleration
-        _radioData.speed = 0;
-        // but we are held
-        _radioData.speed_hold = 1;
-        // reset held count
-        B_rev.durationOfPreviousState = 0;
-    }
+    //~ if (B_rev.held()) {
+        //~ // no acceleration
+        //~ _radioData.speed = 0;
+        //~ // but we are held
+        //~ _radioData.speed_hold = 1;
+        //~ // reset held count
+        //~ B_rev.durationOfPreviousState = 0;
+    //~ }
 
     // check click
     if (B_rev.fell()) {
@@ -233,14 +233,14 @@ void checkREV() {
 // check RIGHT actions
 void checkRIGHT() {
     // check HELD
-    if (B_right.held() > HELD_TIME) {
-        // no acceleration
-        _radioData.turn = 0;
-        // but we are held
-        _radioData.turn_hold = 1;
-        // reset held count
-        B_right.durationOfPreviousState = 0;
-    }
+    //~ if (B_right.held() > HELD_TIME) {
+        //~ // no acceleration
+        //~ _radioData.turn = 0;
+        //~ // but we are held
+        //~ _radioData.turn_hold = 1;
+        //~ // reset held count
+        //~ B_right.durationOfPreviousState = 0;
+    //~ }
 
     // check click
     if (B_right.fell()) {
@@ -263,14 +263,14 @@ void checkRIGHT() {
 // check LEFT actions
 void checkLEFT() {
     // check HELD
-    if (B_left.held() > HELD_TIME) {
-        // no acceleration
-        _radioData.turn = 0;
-        // but we are held
-        _radioData.turn_hold = 1;
-        // reset held count
-        B_left.durationOfPreviousState = 0;
-    }
+    //~ if (B_left.held() > HELD_TIME) {
+        //~ // no acceleration
+        //~ _radioData.turn = 0;
+        //~ // but we are held
+        //~ _radioData.turn_hold = 1;
+        //~ // reset held count
+        //~ B_left.durationOfPreviousState = 0;
+    //~ }
 
     // check click
     if (B_left.fell()) {
